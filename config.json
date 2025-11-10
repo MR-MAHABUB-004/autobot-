@@ -1,5 +1,5 @@
 {
-  "author": "ryuko",
+  "author": "MAHABUB RAHMAN",
   "language": "english",
   "allowinbox": false,
   "adminonly": false,
@@ -7,9 +7,9 @@
   "approval": false,
   "premium": false,
   "autopost": true,
-  "email": "sanjivfresh@gmail.com",
+  "email": "pkmahabur70@gmail.com",
   "operators": [
-    "100091459940475"
+    "100014754734049"
   ],
   "autorestart": {
     "status": false,
@@ -17,7 +17,7 @@
     "note": "the system is automatically restarts in 3 hours"
   },
   "autoDeleteCache": {
-    "status": false,
+    "status": true,
     "time": 60,
     "note": "auto delete caches in 1 hour, kindly set the status to true, if you dont want to delete caches, set the status to false."
   },
