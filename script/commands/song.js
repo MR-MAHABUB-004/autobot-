@@ -1,131 +1,113 @@
-const axios = require("axios");
 const fs = require("fs");
 const path = require("path");
-const ytSearch = require("yt-search");
-const https = require("https");
+const axios = require("axios");
 
-function deleteAfterTimeout(filePath, timeout = 15000) {
-  setTimeout(() => {
-    if (fs.existsSync(filePath)) {
-      fs.unlink(filePath, (err) => {
-        if (!err) console.log(`🗑️ Deleted: ${filePath}`);
-        else console.error(`❌ Delete error for ${filePath}:`, err);
-      });
-    }
-  }, timeout);
-}
+module.exports.config = {
+  name: "song",
+  version: "2.3.0",
+  permission: 0,
+  credits: "IMRAN",
+  description: "Search and download songs from YouTube (MP3 direct).",
+  prefix: false,
+  category: "media",
+  usages: "song [music name]",
+  cooldowns: 5,
+  dependencies: {
+    axios: "",
+    "fs-extra": ""
+  }
+};
 
-module.exports = {
-  config: {
-    name: "song",
-    aliases: ["music"],
-    version: "4.1",
-    prefix: false,
-    author: "‎MR᭄﹅ MAHABUB﹅ メꪜ (Optimized by ChatGPT)",
-    countDown: 5,
-    role: 0,
-    shortDescription: "Download MP3 using YouTube search",
-    longDescription: "Search YouTube for a song and download MP3 via Mahabub CDN API",
-    category: "media",
-    guide: "{p}{n} <song name>",
-  },
+module.exports.run = async ({ api, event, args }) => {
+  const query = args.join(" ");
+  if (!query) {
+    return api.sendMessage(
+      "❌ Please provide a song name.\n📌 Example: song Let Me Love You",
+      event.threadID,
+      event.messageID
+    );
+  }
 
-  onStart: async function ({ api, event, args }) {
-    if (!args.length) {
+  try {
+    const searchingMessage = await api.sendMessage(
+      `🔍 Searching for "${query}"...\n⏳ Please wait...`,
+      event.threadID
+    );
+
+    // ✅ Search with betadash-search-download
+    const searchResponse = await axios.get(
+      `https://betadash-search-download.vercel.app/yt?search=${encodeURIComponent(query)}`
+    );
+    const songData = searchResponse.data[0];
+
+    if (!songData || !songData.url) {
       return api.sendMessage(
-        "» উফফ! কি গান শুনতে চাস তার ২/১ লাইন তো লেখবি না 😾",
+        "⚠️ No results found. Try another song.",
         event.threadID,
         event.messageID
       );
     }
 
-    const songName = args.join(" ");
-    let statusMsg;
+    const ytUrl = songData.url;
+    const title = songData.title;
+    const channelName = songData.channelName || "Unknown";
 
-    try {
-      // 🔍 Notify searching
-      statusMsg = await api.sendMessage(
-        `🔍 Searching for "${songName}"...`,
-        event.threadID
+    await api.editMessage(
+      `🎶 Found: ${title}\n⬇️ Downloading...`,
+      searchingMessage.messageID
+    );
+
+    // ✅ Download API ব্যবহার
+    const downloadResponse = await axios.get(
+      `https://yt-mp3-imran.vercel.app/api?url=${encodeURIComponent(ytUrl)}`
+    );
+
+    const audioUrl = downloadResponse.data.downloadUrl;
+    if (!audioUrl) {
+      return api.sendMessage(
+        "⚠️ Failed to fetch download link. Try again.",
+        event.threadID,
+        event.messageID
       );
+    }
 
-      // 🎧 YouTube search
-      const searchResults = await ytSearch(songName);
-      if (!searchResults.videos.length)
-        throw new Error("No results found on YouTube.");
+    const filePath = path.join(__dirname, `cache/song_${Date.now()}.mp3`);
 
-      const top = searchResults.videos[0];
-      const ytUrl = `https://youtu.be/${top.videoId}`;
+    // Download audio
+    const audioStream = await axios({
+      method: "get",
+      url: audioUrl,
+      responseType: "stream",
+    });
 
-      // 🌐 Fetch audio link from API
-      const apiUrl = `https://mahabub-ytmp3.vercel.app/api/cdn?url=${encodeURIComponent(
-        ytUrl
-      )}`;
-      const res = await axios.get(apiUrl);
+    const writer = fs.createWriteStream(filePath);
+    audioStream.data.pipe(writer);
 
-      if (!res.data?.status || !res.data?.cdna)
-        throw new Error("Audio link not found or API error.");
-
-      const title = res.data.title || top.title || "Unknown Title";
-      const audioUrl = res.data.cdna;
-
-      // ✏️ Update searching message
-      await api.editMessage(
-        `🎵 Found: ${title}\n⬇️ Downloading...`,
-        statusMsg.messageID
-      );
-
-      // 🗂 File setup
-      const safeFile = title.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 30);
-      const ext = audioUrl.includes(".mp3") ? "mp3" : "m4a";
-      const filePath = path.join(__dirname, "cache", `${safeFile}.${ext}`);
-
-      fs.mkdirSync(path.dirname(filePath), { recursive: true });
-
-      // ⬇️ Download audio
-      const file = fs.createWriteStream(filePath);
-      await new Promise((resolve, reject) => {
-        https
-          .get(audioUrl, (res) => {
-            if (res.statusCode !== 200)
-              return reject(
-                new Error(`Download failed [${res.statusCode}]`)
-              );
-            res.pipe(file);
-            file.on("finish", () => file.close(resolve));
-          })
-          .on("error", reject);
-      });
-
-      // 🎶 Send song to user
+    writer.on("finish", async () => {
       await api.sendMessage(
         {
-          body: `🎶 ${title}\n✅ Download completed!`,
+          body: `✅ Download Complete!\n🎧 Title: ${title}\n🎤 Channel: ${channelName}\n📥 Enjoy your song!`,
           attachment: fs.createReadStream(filePath),
         },
         event.threadID,
-        (err) => {
-          if (err) console.error("❌ Send error:", err);
-          else deleteAfterTimeout(filePath, 10000); // auto delete after 10s
-        },
+        () => fs.unlinkSync(filePath),
         event.messageID
       );
+    });
 
-      // ✅ Update status message
-      await api.editMessage(`✅ Sent: ${title}`, statusMsg.messageID);
-    } catch (err) {
-      console.error("❌ Song command error:", err.message);
-
-      const errorText =
-        err.message.includes("ENOTFOUND") || err.message.includes("ECONNREFUSED")
-          ? "🌐 API সার্ভার ডাউন আছে, একটু পরে চেষ্টা করো!"
-          : `❌ Failed: ${err.message}`;
-
-      if (statusMsg?.messageID) {
-        api.editMessage(errorText, statusMsg.messageID);
-      } else {
-        api.sendMessage(errorText, event.threadID, event.messageID);
-      }
-    }
-  },
+    writer.on("error", () => {
+      api.sendMessage(
+        "❌ Error downloading song. Please try again.",
+        event.threadID,
+        event.messageID
+      );
+    });
+  } catch (err) {
+    console.error("❌ Error:", err);
+    api.sendMessage(
+      "⚠️ Unexpected error occurred. Try again later.",
+      event.threadID,
+      event.messageID
+    );
+  }
 };
