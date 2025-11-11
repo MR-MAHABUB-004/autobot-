@@ -1,0 +1,113 @@
+const fs = require("fs/promises");
+const fsSync = require("fs"); // For createReadStream
+const path = require("path");
+const axios = require("axios");
+
+module.exports.config = {
+  name: "album",
+  version: "2.1.0",
+  permission: 0,
+  credits: "IMRAN",
+  description: "Media",
+  prefix: false,
+  premium: false,
+  category: "media",
+  usages: "album",
+  cooldowns: 5
+};
+
+module.exports.run = async function ({ api, event, args }) {
+  const { threadID, senderID } = event;
+
+  if (!args[0]) {
+    const menu =
+      "====「 𝐕𝐈𝐃𝐄𝐎 」====\n━━━━━━━━━━━━━\n" +
+      "𝟙.╰┈➤ 𝐀𝐋𝐎𝐍 𝐕𝐈𝐃𝐄𝐎💔\n" +
+      "𝟚.╰┈➤ 𝐀𝐍𝐈𝐌𝐄 𝐕𝐈𝐃𝐄𝐎😻\n" +
+      "𝟛.╰┈➤ 𝐁𝐀𝐁𝐘 𝐕𝐈𝐃𝐄𝐎🥰\n" +
+      "𝟜.╰┈➤ 𝐂𝐑𝐔𝐒𝐇 𝐕𝐈𝐃𝐄𝐎😍\n" +
+      "𝟝.╰┈➤ 𝐈𝐒𝐋𝐀𝐌𝐈𝐂 𝐕𝐈𝐃𝐄𝐎🕋\n" +
+      "𝟞.╰┈➤ 𝐒𝐀𝐃 𝐕𝐈𝐃𝐄𝐎😔\n" +
+      "𝟟.╰┈➤ 𝐋𝐎𝐕𝐄 𝐕𝐈𝐃𝐄𝐎💝\n" +
+      "𝟠.╰┈➤ 𝐍𝐀𝐓𝐔𝐑𝐀𝐋 𝐕𝐈𝐃𝐄𝐎🌿🕊️\n\n" +
+      "===「 𝟏𝟖+ 𝐕𝐈𝐃𝐄𝐎 」===\n━━━━━━━━━━━━━\n" +
+      "𝟡.╰┈➤ 𝐇𝐎𝐑𝐍𝐘 𝐕𝐈𝐃𝐄𝐎🔥\n" +
+      "𝟙𝟘.╰┈➤ 𝐇𝐎𝐓 𝐕𝐈𝐃𝐄𝐎🥵\n" +
+      "𝟙𝟙.╰┈➤ 𝐈𝐓𝐄𝐌 𝐕𝐈𝐃𝐄𝐎🔞\n\n" +
+      "📥 Reply with a number to get a video.";
+
+    return api.sendMessage(menu, threadID, async (err, info) => {
+      if (err) return console.error(err);
+      const botID = await api.getCurrentUserID();
+      const handleReplyList = global.client.handleReply.get(botID) || [];
+
+      handleReplyList.push({
+        name: module.exports.config.name,
+        messageID: info.messageID,
+        author: senderID
+      });
+
+      global.client.handleReply.set(botID, handleReplyList);
+    });
+  }
+};
+
+module.exports.handleReply = async function ({ api, event }) {
+  const { threadID, senderID, body, messageReply } = event;
+  const botID = await api.getCurrentUserID();
+  const handleList = global.client.handleReply.get(botID) || [];
+
+  const handler = handleList.find(h => h.messageID === messageReply?.messageID);
+  if (!handler || handler.author !== senderID) return;
+
+  function getVideoLink(choice) {
+    const base = "https://imran-api.onrender.com/video";
+    switch (choice) {
+      case "1": return `${base}/alon`;
+      case "2": return `${base}/anime`;
+      case "3": return `${base}/baby`;
+      case "4": return `${base}/crush`;
+      case "5": return `${base}/islam`;
+      case "6": return `${base}/sadvideo`;
+      case "7": return `${base}/love`;
+      case "8": return `${base}/nuture`;
+      case "9": return `${base}/horny`;
+      case "10": return `${base}/hot`;
+      case "11": return `${base}/item`;
+      default: return null;
+    }
+  }
+
+  const videoLink = getVideoLink(body.trim());
+  if (!videoLink) return api.sendMessage("❌ Invalid number. Please try again.", threadID);
+
+  try {
+    const res = await axios.get(videoLink);
+    const videoData = res.data.data;
+    const caption = res.data.imran || "🎬 Here's your video!";
+       const total = res.data.count || "N/A";
+      console.log(videoData);
+//
+    const videoResponse = await axios.get(videoData, {
+      responseType: "arraybuffer"
+    });
+
+    const tempPath = path.join(__dirname, "cache", `video_${Date.now()}.mp4`);
+    await fs.writeFile(tempPath, Buffer.from(videoResponse.data));
+
+    await api.sendMessage({
+      body: `${caption}\n\n¤《𝐓𝐎𝐓𝐀𝐋 𝐕𝐈𝐃𝐄𝐎: ${total}》¤`,
+      attachment: fsSync.createReadStream(tempPath)
+    }, threadID, async () => {
+      await fs.unlink(tempPath);
+    });
+
+    // Clean up reply listener ok
+    const updatedList = handleList.filter(item => item.messageID !== handler.messageID);
+    global.client.handleReply.set(botID, updatedList);
+
+  } catch (error) {
+    console.error("❌ Video fetch error:", error);
+    return api.sendMessage("⚠️ Failed to load video. Please try again later.", threadID);
+  }
+};

@@ -1,0 +1,79 @@
+const axios = require("axios");
+const moment = require("moment-timezone");
+
+module.exports.config = {
+  name: "autotime",
+  version: "1.0.0",
+  credits: "Ryuko Developer",
+  permission: 0,
+  description: "An example command",
+  category: "auto",
+  usages: "example",
+  prefix: true,
+  premium: true,
+  cooldown: 0
+};
+
+const lastSent = {};
+const groupIDs = ["9558591557528359"];
+//fi
+
+async function sendVideo(api, threadID, timeSlot) {
+  try {
+    const response = await axios.get("https://mahabub-apis.vercel.app/mahabub");
+
+    const videoUrl = response.data?.data;
+    const title = response.data?.title || "🔹 No Title Found";
+
+    if (!videoUrl) {
+      return api.sendMessage("❌ No videos found! (Invalid API Response)", threadID);
+    }
+
+    const res = await axios.get(videoUrl, { responseType: "stream" });
+
+    api.sendMessage({
+      body: `====== 𝗔𝗨𝗧𝗢 𝗦𝗘𝗡𝗗 ======\n━━━━━━━━━━━━━━━━\n➝ 𝗡𝗼𝘄 𝗜𝘀: ${timeSlot}\n\n💬: ${title}\n━━━━━━━━━━━━━━━━━━\n➝ 𝗧𝗵𝗶𝘀 𝗜𝘀 𝗔𝗻 𝗔𝘂𝘁𝗼𝗺𝗮𝘁𝗶𝗰 𝗠𝗲𝘀𝘀𝗮𝗴𝗲`,
+      attachment: res.data
+    }, threadID);
+
+    lastSent[threadID] = timeSlot;
+
+  } catch (error) {
+    console.error("🚨 API Error:", error);
+    api.sendMessage("❌ Failed to fetch video.", threadID);
+  }
+}
+
+function formatTime(date) {
+  return moment(date).tz("Asia/Dhaka").format("h:mmA").toUpperCase();
+}
+
+function scheduleVideo(api) {
+  const timeSlots = [
+    "4:30AM", "7:30AM", "8:30AM", "9:30AM", "12:30PM",
+    "1:30PM", "2:30PM", "4:30PM", "5:30PM",
+    "7:30PM", "8:30PM", "9:30PM", "11:30PM", "12:30AM"
+  ];
+
+  setInterval(async () => {
+    const currentTime = formatTime(new Date());
+
+    if (!timeSlots.includes(currentTime)) return;
+
+    for (const threadID of groupIDs) {
+      if (lastSent[threadID] !== currentTime) {
+        await sendVideo(api, threadID, currentTime);
+      }
+    }
+  }, 30000);
+}
+
+module.exports.onLoad = function ({ api }) {
+  if (global.autosendInitialized) return;
+  global.autosendInitialized = true;
+
+  scheduleVideo(api);
+  console.log("✅ AutoSend to fixed groups started successfully");
+};
+
+module.exports.run = async () => {};

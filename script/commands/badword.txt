@@ -1,0 +1,36 @@
+module.exports.config = {
+  name: "reply",
+  version: "1.0.2",
+  permission: 0,
+  credits: "IMRAN",
+  description: "Auto reply to bad words",
+  prefix: false,
+  premium: false,
+  category: "Without Prefix",
+  usages: "[tag]",
+  cooldowns: 5
+};
+
+module.exports.handleEvent = async function ({ api, event }) {
+  const { threadID, messageID, body } = event;
+  if (!body) return;
+
+  const react = body.toLowerCase();
+  const badWords = [
+    "magi", "bessa", "খানকি মাগি", "চুদানি", "চুদা", "চুদ", "ভুদা", "buda", "gali", "galibaz",
+    "সাওয়া", "khanki", "maderxud", "xud", "xuda", "xudi", "cuda", "cudi", "mgi", "nodi", "নডি",
+    "মাগি", "মাদারচুদ", "চুদি", "ষুদা", "ষুদি", "bal", "খাংকির পোলা", "খানকি মাকি", "SawYa",
+    "Sawya", "tor mare xudi", "vuda", "heda", "bap"
+  ];
+
+  if (badWords.some(word => react.includes(word))) {
+    api.sendMessage({ 
+  body: "╭──────────────────────╮\n  ⚠️ WARNING ⚠️\n╰─➤ আবার গালি দিলে মুখে তালা লাগায়া দিমু, বুঝছো?!" 
+}, threadID, messageID);
+    api.setMessageReaction("😠", messageID, () => {}, true);
+  }
+};
+
+module.exports.run = async function () {
+  // Not used since this command works via handleEvent
+};
