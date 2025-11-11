@@ -9,14 +9,14 @@ module.exports.config = {
   permission: 0,
   credits: "mahabub",
   description: "Auto video downloader",
-  prefix: true,
+  prefix: false,
   premium: false,
   category: "User",
   usages: "",
   cooldowns: 5
 };
 
-  run: async function({ api, event, args }) {
+  module.exports.run: async function({ api, event, args }) {
     const threadID = event.threadID;
     const messageID = event.messageID;
     const message = (event.body || "").trim();
