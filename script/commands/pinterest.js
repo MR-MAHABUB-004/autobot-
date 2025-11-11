@@ -40,8 +40,8 @@ module.exports.run = async function ({ api, event, args, prefix}) {
         messageID
       );
     }
-
-    const apiUrl = `https://ccprojectapis.ddns.net/api/pin?title=${keySearch}&count=${numberSearch}`;
+// 
+    const apiUrl = `https://xnil.xnil.work.gd/xnil/pinterest?title=${keySearch}&count=${numberSearch}`;
     console.log(`Fetching data from API: ${apiUrl}`);
 
     const res = await axios.get(apiUrl);

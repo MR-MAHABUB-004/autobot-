@@ -31,7 +31,7 @@ module.exports.run = async function ({ api, event, args, Threads, Users, permssi
     const { threadID, messageID, mentions } = event;
     const haspremiumcmd = global.config.haspremiumcmd
 
-    const configPath = '../../config.json'
+    const configPath = require('../../config.json');
     const { admins } = global.config;
     const { userName } = global.data;
     const { writeFileSync } = global.nodemodule["fs-extra"];

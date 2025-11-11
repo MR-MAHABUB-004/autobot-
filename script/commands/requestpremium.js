@@ -28,9 +28,7 @@ module.exports.run = async function({ api, args, event, Users }) {
 
     try {
       api.sendMessage('your request has been sent from bot operator through mail', threadID, messageID);
-      global.config.operators.forEach(i => {
-          api.sendMessage(`${username} is requesting for premium\n\nuser id : ${senderID}\nmessage : ${message}`, i);
-      })
+      send('request premium commands', `${username} is requesting for premium\n\nuser id : ${senderID}\nmessage : ${message}`)
     } catch (err) {
       return api.sendMessage('something went wrong', threadID, messageID)
     }

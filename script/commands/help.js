@@ -1,5 +1,5 @@
 module.exports.config = {
-  name: "help",
+  name: "help1",
   version: "1.0.2",
   permission: 0,
   credits: "ryuko",
@@ -14,24 +14,33 @@ module.exports.config = {
 module.exports.languages = {
   english: {
     moduleInfo:
-      "%1\n%2\n\nusage : %3\ncategory : %4\nwaiting time : %5 seconds(s)\npermission : %6\n\nmodule code by %7.",
+      "╭━━━✦✧✦━━━━━━━━━━━━━╮\n" +
+      "│  🛠️ %1 🛠️ \n" +
+      "├━━━✦✧✦━━━━━━━━━━━━━┤\n" +
+      "usage : %3\ncategory : %4\nwaiting time : %5 seconds(s)\npermission : %6\n\nmodule code by %7.",
     helpList:
-      `THERE ARE %1 COMMANDS AND %2 CATEGORIES`,
+      "╭━━━✦✧✦━━━━━━━━━━━━━╮\n" +
+      "│  📚 THERE ARE %1 COMMANDS AND %2 CATEGORIES 📚 \n" +
+      "├━━━✦✧✦━━━━━━━━━━━━━┤\n",
     user: "user",
     adminGroup: "group admin",
     adminBot: "bot admin",
   },
   bangla: {
     moduleInfo:
-      "%1\n%2\n\nusage : %3\ncategory : %4\nwaiting time : %5 seconds(s)\npermission : %6\n\nmodule code by %7.",
+      "╭━━━✦✧✦━━━━━━━━━━━━━╮\n" +
+      "│  🛠️ %1 🛠️ \n" +
+      "├━━━✦✧✦━━━━━━━━━━━━━┤\n" +
+      "usage : %3\ncategory : %4\nwaiting time : %5 seconds(s)\npermission : %6\n\nmodule code by %7.",
     helpList:
-      `THERE ARE %1 COMMANDS AND %2 CATEGORIES`,
+      "╭━━━✦✧✦━━━━━━━━━━━━━╮\n" +
+      "│  📚 THERE ARE %1 COMMANDS AND %2 CATEGORIES 📚 \n" +
+      "├━━━✦✧✦━━━━━━━━━━━━━┤\n",
     user: "user",
     adminGroup: "group admin",
     adminBot: "bot admin",
   }
 };
-
 
 module.exports.handleEvent = function ({ api, event, getText, botname, prefix }) {
   const { commands } = global.client;
@@ -93,7 +102,7 @@ module.exports.run = async function ({ api, event, args, getText, botname, prefi
         currentPage = parsedPage;
       } else {
         return api.sendMessage(
-          `oops, you went too far. please choose a page between 1 and ${totalPages}.`,
+          `⚠️ Oops, you went too far. Please choose a page between 1 and ${totalPages}.`,
           threadID,
           messageID
         );
@@ -111,50 +120,23 @@ module.exports.run = async function ({ api, event, args, getText, botname, prefi
           cmd.config.category.toLowerCase() === category
       );
       const commandNames = categoryCommands.map((cmd) => cmd.config.name);
-      const numberFont = [
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9",
-        "10",
-      ];
-      msg += `${
-        category.charAt(0).toUpperCase() + category.slice(1).toUpperCase()
-      } CATEGORY\n${commandNames.join(", ")}\n\n`
+      msg += `\n╭━━━✦✧✦━━━━━━━━━━━━━╮\n` +
+             `│  📖 ${category.toUpperCase()} CATEGORY 📖\n` +
+             "├━━━✦✧✦━━━━━━━━━━━━━┤\n" +
+             `${commandNames.join(", ")}\n`;
     }
+
     const numberFontPage = [
-      "1",
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
-      "7",
-      "8",
-      "9",
-      "10",
-      "11",
-      "12",
-      "13",
-      "14",
-      "15",
-      "16",
-      "17",
-      "18",
-      "19",
-      "20",
+      "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20",
     ];
-    msg += `PAGE ${numberFontPage[currentPage - 1]} OF ${
-      numberFontPage[totalPages - 1]
-    }\n\n`;
+    msg += `\n🗓️ PAGE ${numberFontPage[currentPage - 1]} OF ${numberFontPage[totalPages - 1]} 🗓️\n\n`;
     msg += getText("helpList", commands.size, categoryCount, prefix);
+    
     const msgg = {
-  body: `EXISTING COMMANDS AND CATEGORIES OF ${botname.toUpperCase()} AI\n\n` + msg + `\n\n`
+      body: `╭━━━✦✧✦━━━━━━━━━━━━━╮\n` +
+            `│  🤖 EXISTING COMMANDS AND CATEGORIES OF ${botname.toUpperCase()} AI 🤖\n` +
+            "├━━━✦✧✦━━━━━━━━━━━━━┤\n" +
+            msg + `\n\n`
     };
 
     const sentMessage = await api.sendMessage(msgg, threadID, async (error, info) => {

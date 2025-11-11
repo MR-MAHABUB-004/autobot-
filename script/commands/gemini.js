@@ -20,8 +20,9 @@ module.exports.run = async function ({api, event, args}) {
     if (!ask) {
         return api.sendMessage(`please provide a message`, event.threadID, event.messageID);
     }
+    // 
     try {
-        const res = await axios.get(`https://kaiz-apis.gleeze.com/api/gemini-pro?q=${ask}&uid=${event.senderID}`);
+        const res = await axios.get(`https://kaiz-apis.gleeze.com/api/gemini-vision?q=${ask}&uid=${event.senderID}&apikey=6c9542b5-7070-48cb-b325-80e1ba65a451`);
         const message = res.data.response;
         return api.sendMessage(message, event.threadID, event.messageID);
     } catch (err) {
