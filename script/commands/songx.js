@@ -4,12 +4,12 @@ const path = require("path");
 
 module.exports.config = {
   name: "songx",
-  version: "1.4",
+  version: "1.5",
   permission: 0,
   prefix: false,
   premium: false,
-  credits: "Mostakim",
-  Description: "Identify a song from a video/audio or link",
+  credits: "Mostakim + GPT Fix",
+  description: "Identify a song from a video/audio or link",
   category: "music",
   cooldowns: 5
 };
@@ -20,11 +20,43 @@ module.exports.run = async function ({ api, event, args }) {
 
     let mediaUrl = args.join(" ").trim();
 
-    // If user replied to a video/audio
+    // ✅ If user replied to a video/audio message
     if (!mediaUrl && event.messageReply?.attachments?.length) {
       const att = event.messageReply.attachments[0];
       if (att.type === "video" || att.type === "audio") {
-        mediaUrl = att.url;
+        const fileExt = att.type === "video" ? ".mp4" : ".mp3";
+        const tempPath = path.join(__dirname, `temp_${Date.now()}${fileExt}`);
+        const file = fs.createWriteStream(tempPath);
+
+        // Download attachment
+        const response = await axios.get(att.url, { responseType: "stream" });
+        response.data.pipe(file);
+
+        await new Promise((resolve, reject) => {
+          file.on("finish", resolve);
+          file.on("error", reject);
+        });
+
+        // ✅ Upload file to file.io (get public URL)
+        const upload = await axios.post(
+          "https://file.io",
+          fs.createReadStream(tempPath),
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          }
+        );
+
+        fs.unlinkSync(tempPath); // delete temp file
+
+        if (upload.data && upload.data.link) {
+          mediaUrl = upload.data.link;
+        } else {
+          return api.sendMessage(
+            "⚠️ Failed to upload media to URL.",
+            event.threadID,
+            event.messageID
+          );
+        }
       }
     }
 
@@ -36,19 +68,26 @@ module.exports.run = async function ({ api, event, args }) {
       );
     }
 
+    // ✅ Use API to detect song
     const apiUrl = `https://www.noobs-api.rf.gd/dipto/songFind?url=${encodeURIComponent(mediaUrl)}`;
     const { data } = await axios.get(apiUrl);
 
     if (!data.track || !data.track.title) {
-      return api.sendMessage("⚠️ No song match found.", event.threadID, event.messageID);
+      return api.sendMessage(
+        "⚠️ No song match found.",
+        event.threadID,
+        event.messageID
+      );
     }
 
     const t = data.track;
 
     const album =
-      t.sections?.[0]?.metadata?.find((m) => m.title === "Album")?.text || "N/A";
+      t.sections?.[0]?.metadata?.find((m) => m.title === "Album")?.text ||
+      "N/A";
     const release =
-      t.sections?.[0]?.metadata?.find((m) => m.title === "Released")?.text || "N/A";
+      t.sections?.[0]?.metadata?.find((m) => m.title === "Released")?.text ||
+      "N/A";
 
     let msg = `🎶 Song Identified\n\n`;
     msg += `• Title: ${t.title}\n`;
@@ -57,7 +96,7 @@ module.exports.run = async function ({ api, event, args }) {
     msg += `• Released: ${release}\n`;
     msg += `• Genre: ${t.genres?.primary || "N/A"}`;
 
-    // Find .m4a preview link
+    // ✅ Find audio preview
     let previewUrl = null;
     const actions = t.hub?.actions || [];
     for (const a of actions) {
@@ -83,7 +122,7 @@ module.exports.run = async function ({ api, event, args }) {
 
     api.setMessageReaction("✅", event.messageID, () => {}, true);
 
-    // Handle preview audio
+    // ✅ Send audio preview (if available)
     if (previewUrl) {
       const filePath = path.join(__dirname, `song_preview_${Date.now()}.m4a`);
       const writer = fs.createWriteStream(filePath);
@@ -92,12 +131,9 @@ module.exports.run = async function ({ api, event, args }) {
 
       writer.on("finish", () => {
         api.sendMessage(
-          {
-            body: msg,
-            attachment: fs.createReadStream(filePath)
-          },
+          { body: msg, attachment: fs.createReadStream(filePath) },
           event.threadID,
-          () => fs.unlinkSync(filePath), // Delete after sending
+          () => fs.unlinkSync(filePath),
           event.messageID
         );
       });
@@ -118,10 +154,10 @@ module.exports.run = async function ({ api, event, args }) {
       );
     }
   } catch (err) {
-    console.error("❌ Error:", err.message);
+    console.error("❌ Error:", err);
     api.setMessageReaction("❌", event.messageID, () => {}, true);
     return api.sendMessage(
-      "❌ Error while fetching song info or audio preview.",
+      "❌ Error while fetching or uploading video/audio.",
       event.threadID,
       event.messageID
     );
